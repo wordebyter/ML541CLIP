@@ -10,10 +10,10 @@ from torch.utils.data import DataLoader
 import clip
 from transformers import CLIPProcessor, CLIPModel
 import os
-#json_path = '~/MLfinal/ML541CLIP/captions_val2017.json'
+from sklearn.model_selection import train_test_split
+#path to json file and folder with images
 json_path = os.path.expanduser('~/MLfinal/ML541CLIP/captions_val2017.json')
 image_path = os.path.expanduser('~/MLfinal/ML541CLIP/val2017')
-#image_path = './val2017'
 
 
 with open(json_path, 'r') as f:
@@ -51,28 +51,25 @@ class image_title_dataset():
         title = self.title[idx]
         return image, title
 
-# use your own data
 list_image_path = []
 list_txt = []
-#print(type(input_data))
 input_data = input_data[0]
-#print(input_data)
-#print('here')
-#print(input_data['annotations'])
 for item in input_data['annotations']:
-  #print(item)
   id = item['image_id']
   id = str(id).zfill(12)
-  #print(item)
   img_path = image_path + '/' + id + '.jpg'
-  #print(img_path)
   caption = item['caption'][:40]
   list_image_path.append(img_path)
   list_txt.append(caption)
-#print(list_image_path)
-#print('data done')
-dataset = image_title_dataset(list_image_path, list_txt)
-train_dataloader = DataLoader(dataset, batch_size=1000, shuffle=True) #Define your own dataloader
+train_list_image_path, test_list_image_path, train_list_txt, test_list_txt = train_test_split(list_image_path, list_txt, test_size=0.2, random_state=42)
+
+# Create train dataset
+train_dataset = image_title_dataset(train_list_image_path, train_list_txt)
+train_dataloader = DataLoader(train_dataset, batch_size=1000, shuffle=True)
+
+# Create test dataset
+test_dataset = image_title_dataset(test_list_image_path, test_list_txt)
+test_dataloader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
 # Function to convert model's parameters to FP32 format
 def convert_models_to_fp32(model): 
@@ -83,6 +80,7 @@ def convert_models_to_fp32(model):
 
 if device == "cpu":
   model.float()
+  print('CPU')
 
 # Prepare the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=5e-5,betas=(0.9,0.98),eps=1e-6,weight_decay=0.2) # the lr is smaller, more safe for fine tuning to new dataset
@@ -121,3 +119,17 @@ for epoch in range(num_epochs):
             clip.model.convert_weights(model)
 
         pbar.set_description(f"Epoch {epoch}/{num_epochs}, Loss: {total_loss.item():.4f}")
+
+
+model.eval()
+with torch.no_grad():
+    for batch in test_dataloader:
+        images, texts = batch
+
+        images = images.to(device)
+        texts = texts.to(device)
+
+        # Forward pass
+        logits_per_image, logits_per_text = model(images, texts)
+
+
