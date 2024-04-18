@@ -27,6 +27,9 @@ with open(json_path, 'r') as f:
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
+config = model.config
+print(config)
+
 
 # Choose computation device
 device = "cuda:0" if torch.cuda.is_available() else "cpu" 
