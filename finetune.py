@@ -11,9 +11,10 @@ import clip
 from transformers import CLIPProcessor, CLIPModel
 import os
 from sklearn.model_selection import train_test_split
+from transformers import CLIPConfig, CLIPModel
 #path to json file and folder with images
-json_path = os.path.expanduser('~/MLfinal/ML541CLIP/captions_val2017.json')
-image_path = os.path.expanduser('~/MLfinal/ML541CLIP/val2017')
+json_path = os.path.expanduser('~/hw/MLfinal/ML541CLIP/captions_val2017.json')
+image_path = os.path.expanduser('~/hw/MLfinal/ML541CLIP/val2017')
 
 
 with open(json_path, 'r') as f:
@@ -26,9 +27,15 @@ with open(json_path, 'r') as f:
 # Load the CLIP model and processor
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+config = CLIPConfig.from_pretrained("openai/clip-vit-base-patch32")
 
-config = model.config
-print(config)
+config.vision_config.dropout = 0.1  # [0.1, 0.2, 0.3]
+config.projection_dim = 640  # [512, 640, 768]
+config.initializer_factor = 0.02  # Adjust as needed
+
+# Apply the updated configuration to the model
+model = CLIPModel(config)
+print(model.config)
 
 
 # Choose computation device
@@ -68,11 +75,11 @@ train_list_image_path, test_list_image_path, train_list_txt, test_list_txt = tra
 
 # Create train dataset
 train_dataset = image_title_dataset(train_list_image_path, train_list_txt)
-train_dataloader = DataLoader(train_dataset, batch_size=1000, shuffle=True)
+train_dataloader = DataLoader(train_dataset, batch_size=500, shuffle=True)
 
 # Create test dataset
 test_dataset = image_title_dataset(test_list_image_path, test_list_txt)
-test_dataloader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
+test_dataloader = DataLoader(test_dataset, batch_size=500, shuffle=False)
 
 # Function to convert model's parameters to FP32 format
 def convert_models_to_fp32(model): 
