@@ -27,12 +27,17 @@ with open(json_path, 'r') as f:
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
+print(model)
+print()
+print()
+print(model.vision_model.encoder.layers[0].self_attn)
+
 config = model.config
 print(config)
 
 
 # Choose computation device
-device = "cuda:0" if torch.cuda.is_available() else "cpu" 
+device = "cuda" if torch.cuda.is_available() else "cpu" 
 
 # Load pre-trained CLIP model
 model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
@@ -87,7 +92,6 @@ if device == "cpu":
 
 # Prepare the optimizer
 optimizer = torch.optim.Adam(model.parameters(), lr=5e-5,betas=(0.9,0.98),eps=1e-6,weight_decay=0.2) # the lr is smaller, more safe for fine tuning to new dataset
-
 
 # Specify the loss function
 loss_img = nn.CrossEntropyLoss()
