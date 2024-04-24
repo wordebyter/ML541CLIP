@@ -6,3 +6,4 @@ tqdm
 Pillow
 transformers
 scikit-learn
+tensorflow>=2.0
