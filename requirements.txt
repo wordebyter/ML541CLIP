@@ -7,3 +7,4 @@ Pillow
 transformers
 scikit-learn
 tensorflow>=2.0
+timm

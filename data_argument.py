@@ -5,6 +5,7 @@ import tensorflow as tf
 import torchvision.transforms as transforms
 from timm.data.random_erasing import RandomErasing
 from PIL import Image
+import numpy as np
 
 input_dir = '/home/zyang12/hw/MLfinal/ML541CLIP/val2017'
 output_dir = '/home/zyang12/hw/MLfinal/ML541CLIP/images_augmented'
@@ -30,13 +31,19 @@ for filename in os.listdir(input_dir):
     if filename.endswith((".png", ".jpg", ".jpeg")):
         image_path = os.path.join(input_dir, filename)
         image = load_img(image_path)
-        image = img_to_array(image)
-        image_tensor = transform_to_tensor(image)
-        erased_tensor = random_erase(image_tensor)
-        image = transform_to_image(erased_tensor)
-        image.save(os.path.join(output_dir, filename))  # Save erased image
+        image_array = img_to_array(image)
+        
+        image_array = np.expand_dims(image_array, axis=0)
 
-        # If further augmentation is needed
-        image = image.reshape((1,) + image.shape)
-        for batch in datagen.flow(image, batch_size=1, save_to_dir=output_dir, save_prefix='aug_', save_format='jpeg'):
-            break  # Save one augmented image and break
+        image_tensor = transform_to_tensor(image)
+        erased_tensor = random_erase(image_tensor.unsqueeze(0))
+        erased_image = transform_to_image(erased_tensor.squeeze(0))
+
+        erased_image_array = np.expand_dims(img_to_array(erased_image), axis=0)
+
+        prefix = os.path.splitext(filename)[0]
+        for i in range(1):
+            save_prefix = f"{prefix}_aug_{i+1}"
+            for batch in datagen.flow(erased_image_array, batch_size=1, save_to_dir=output_dir, save_prefix=save_prefix, save_format='jpeg'):
+                break  
+    
