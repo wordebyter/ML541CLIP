@@ -95,7 +95,7 @@ loss_img = nn.CrossEntropyLoss()
 loss_txt = nn.CrossEntropyLoss()
 
 # Train the model
-num_epochs = 5
+num_epochs = 10
 for epoch in range(num_epochs):
     pbar = tqdm(train_dataloader, total=len(train_dataloader))
     for batch in pbar:

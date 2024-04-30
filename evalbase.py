@@ -95,7 +95,7 @@ loss_img = nn.CrossEntropyLoss()
 loss_txt = nn.CrossEntropyLoss()
 
 # Train the model
-num_epochs = 5
+num_epochs = 0
 for epoch in range(num_epochs):
     pbar = tqdm(train_dataloader, total=len(train_dataloader))
     for batch in pbar:
@@ -128,32 +128,44 @@ model.eval()
 
 
 # Evaluate the model now
-def get_features(dataset):
-    all_features = []
-    all_labels = []
-    
-    with torch.no_grad():
-        for images, labels in tqdm(DataLoader(dataset, batch_size=100)):
-            features = model.encode_image(images.to(device))
+total_loss_img = 0.0
+total_correct_img = 0
+total_loss_txt = 0.0
+total_correct_txt = 0
+total_samples = 0
 
-            all_features.append(features)
-            all_labels.append(labels)
+with torch.no_grad():
+    for batch in test_dataloader:
+        images, texts = batch
 
-    return torch.cat(all_features).cpu().numpy(), torch.cat(all_labels).cpu().numpy()
+        images = images.to(device)
+        texts = texts.to(device)
 
-# Calculate the image features
-train_features, train_labels = get_features(train_dataset)
-test_features, test_labels = get_features(test_dataset)
+        # Forward pass
+        logits_per_image, logits_per_text = model(images, texts)
 
-train_labels = train_labels.ravel()
-test_labels = test_labels.ravel()
+        # Compute loss and accuracy for images
+        ground_truth_img = torch.arange(len(images), dtype=torch.long, device=device)
+        loss_img_batch = loss_img(logits_per_image, ground_truth_img)
+        total_loss_img += loss_img_batch.item()
+        predicted_labels_img = logits_per_image.argmax(dim=1)
+        total_correct_img += (predicted_labels_img == ground_truth_img).sum().item()
 
-# Perform logistic regression
-classifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1)
-classifier.fit(train_features, train_labels)
+        # Compute loss and accuracy for texts
+        ground_truth_txt = torch.arange(len(texts), dtype=torch.long, device=device)
+        loss_txt_batch = loss_txt(logits_per_text, ground_truth_txt)
+        total_loss_txt += loss_txt_batch.item()
+        predicted_labels_txt = logits_per_text.argmax(dim=1)
+        total_correct_txt += (predicted_labels_txt == ground_truth_txt).sum().item()
 
-# Evaluate using the logistic regression classifier
-predictions = classifier.predict(test_features)
-accuracy = np.mean((test_labels == predictions).astype(float)) * 100.
-print(f"Accuracy = {accuracy:.3f}")
+        total_samples += len(images)
 
+# Calculate average loss and accuracy
+avg_loss_img = total_loss_img / total_samples
+accuracy_img = total_correct_img / total_samples
+avg_loss_txt = total_loss_txt / total_samples
+accuracy_txt = total_correct_txt / total_samples
+
+print(f"Image Loss: {avg_loss_img:.4f}, Image Accuracy: {accuracy_img:.4f}")
+print(f"Text Loss: {avg_loss_txt:.4f}, Text Accuracy: {accuracy_txt:.4f}")
+print('base_model')
