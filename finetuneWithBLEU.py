@@ -127,28 +127,20 @@ for epoch in range(num_epochs):
         pbar.set_description(f"Epoch {epoch}/{num_epochs}, Loss: {total_loss.item():.4f}")
 
 
-# Evaluate the model now
 def get_BLEU_scores(dataset):
     BLEU_scores = []
-    highest_BLEU_score_for_image = 0
-    
+
     with torch.no_grad():
         for images, labels in tqdm(DataLoader(dataset, batch_size=100)):
-            # Compare the label predicted by the model for each image with the actual labels for the image
-            # The highest BLEU score will be returned for each image
-            for image in images:
-                for label in labels:
-                    caption = model(image, beam_size = 1)
-                    split_caption = caption.split()
-                    split_label = label.split()
+            for i, image in enumerate(images):
+                references = [label.split() for label in labels]
+                caption = model(image.unsqueeze(0), beam_size=1)
+                split_caption = caption.split()
+                current_BLEU_score = nltk.translate.bleu_score.sentence_bleu(references, split_caption)
+                BLEU_scores.append(current_BLEU_score)
 
-                    current_BLEU_score = nltk.translate.bleu_score.sentence_bleu(split_label, split_caption)
-                    if current_BLEU_score > highest_BLEU_score_for_image:
-                        highest_BLEU_score_for_image = current_BLEU_score
-                
-                BLEU_scores.append(highest_BLEU_score_for_image)
-
-    return torch.cat(BLEU_scores).cpu().numpy()
+    BLEU_tensor = torch.tensor(BLEU_scores)
+    return BLEU_tensor.cpu().numpy()
 
 model.eval()
 # Calculate the BLEU scores from the model on the test dataset
