@@ -127,28 +127,25 @@ for epoch in range(num_epochs):
         pbar.set_description(f"Epoch {epoch}/{num_epochs}, Loss: {total_loss.item():.4f}")
 
 
-# Evaluate the model now
 def get_METEOR_scores(dataset):
     METEOR_scores = []
-    highest_METEOR_score_for_image = 0
-    
+
     with torch.no_grad():
         for images, labels in tqdm(DataLoader(dataset, batch_size=100)):
-            # Compare the label predicted by the model for each image with the actual labels for the image
-            # The highest METEOR score will be returned for each image
-            for image in images:
+            for i, image in enumerate(images):
+                highest_METEOR_score_for_image = 0  # Reset for each image
+                predicted_caption = model(image.unsqueeze(0), beam_size=1)  # Unsqueeze to add batch dimension
+                split_caption = predicted_caption.split()
+                
                 for label in labels:
-                    caption = model(image, beam_size = 1)
-                    split_caption = caption.split()
                     split_label = label.split()
-
-                    current_METEOR_score = nltk.translate.meteor_score(split_label, split_caption)
-                    if current_METEOR_score > highest_METEOR_score_for_image:
-                        highest_METEOR_score_for_image = current_METEOR_score
+                    current_METEOR_score = nltk.translate.meteor_score.meteor_score([split_label], split_caption)
+                    highest_METEOR_score_for_image = max(highest_METEOR_score_for_image, current_METEOR_score)
                 
                 METEOR_scores.append(highest_METEOR_score_for_image)
 
-    return torch.cat(METEOR_scores).cpu().numpy()
+    METEOR_tensor = torch.tensor(METEOR_scores)
+    return METEOR_tensor.cpu().numpy()
 
 model.eval()
 # Calculate the METEOR scores from the model on the test dataset
