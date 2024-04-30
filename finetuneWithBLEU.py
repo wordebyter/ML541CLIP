@@ -133,11 +133,16 @@ def get_BLEU_scores(dataset):
     with torch.no_grad():
         for images, labels in tqdm(DataLoader(dataset, batch_size=100)):
             for i, image in enumerate(images):
-                references = [label.split() for label in labels]
-                caption = model(image.unsqueeze(0), beam_size=1)
-                split_caption = caption.split()
-                current_BLEU_score = nltk.translate.bleu_score.sentence_bleu(references, split_caption)
-                BLEU_scores.append(current_BLEU_score)
+                highest_BLEU_score_for_image = 0
+                predicted_caption = model(image.unsqueeze(0), beam_size=1)
+                split_caption = predicted_caption.split()
+                
+                for label in labels:
+                    split_label = label.split()
+                    current_BLEU_score = nltk.translate.bleu_score.sentence_bleu([split_label], split_caption)
+                    highest_BLEU_score_for_image = max(highest_BLEU_score_for_image, current_BLEU_score)
+                
+                BLEU_scores.append(highest_BLEU_score_for_image)
 
     BLEU_tensor = torch.tensor(BLEU_scores)
     return BLEU_tensor.cpu().numpy()
